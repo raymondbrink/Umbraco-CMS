@@ -7,23 +7,26 @@ namespace Umbraco.Cms.Infrastructure.Serialization;
 
 public class JsonNetSerializer : IJsonSerializer
 {
+    [Obsolete("This is a static field and shared between derived implementations, create your own instance field instead. This field will be removed in v13.")]
     protected static readonly JsonSerializerSettings JsonSerializerSettings = new()
     {
-        Converters = new List<JsonConverter> { new StringEnumConverter() },
+        Converters = new List<JsonConverter>
+        {
+            new StringEnumConverter()
+        },
         Formatting = Formatting.None,
         NullValueHandling = NullValueHandling.Ignore,
     };
 
-    public string Serialize(object? input) => JsonConvert.SerializeObject(input, JsonSerializerSettings);
+#pragma warning disable CS0618 // Type or member is obsolete
+    public virtual string Serialize(object? input) => JsonConvert.SerializeObject(input, JsonSerializerSettings);
 
-    public T? Deserialize<T>(string input) => JsonConvert.DeserializeObject<T>(input, JsonSerializerSettings);
+    public virtual T? Deserialize<T>(string input) => JsonConvert.DeserializeObject<T>(input, JsonSerializerSettings);
+#pragma warning restore CS0618 // Type or member is obsolete
 
     public T? DeserializeSubset<T>(string input, string key)
     {
-        if (key == null)
-        {
-            throw new ArgumentNullException(nameof(key));
-        }
+        ArgumentNullException.ThrowIfNull(key);
 
         JObject? root = Deserialize<JObject>(input);
         JToken? jToken = root?.SelectToken(key);

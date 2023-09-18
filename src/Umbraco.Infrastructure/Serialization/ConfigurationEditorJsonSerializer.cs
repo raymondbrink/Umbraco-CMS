@@ -1,5 +1,6 @@
 using System.Reflection;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 using Umbraco.Cms.Core.PropertyEditors;
 using Umbraco.Cms.Core.Serialization;
@@ -8,15 +9,26 @@ namespace Umbraco.Cms.Infrastructure.Serialization;
 
 public class ConfigurationEditorJsonSerializer : JsonNetSerializer, IConfigurationEditorJsonSerializer
 {
-    public ConfigurationEditorJsonSerializer()
+    private static readonly JsonSerializerSettings _jsonSerializerSettings = new()
     {
-        JsonSerializerSettings.Converters.Add(new FuzzyBooleanConverter());
-        JsonSerializerSettings.ContractResolver = new ConfigurationCustomContractResolver();
-        JsonSerializerSettings.Formatting = Formatting.None;
-        JsonSerializerSettings.NullValueHandling = NullValueHandling.Ignore;
-    }
+        Converters = new List<JsonConverter>
+        {
+            new StringEnumConverter(),
+            new FuzzyBooleanConverter()
+        },
+        ContractResolver = new ConfigurationCustomContractResolver(),
+        Formatting = Formatting.None,
+        NullValueHandling = NullValueHandling.Ignore,
+    };
 
-    private class ConfigurationCustomContractResolver : DefaultContractResolver
+    public sealed override string Serialize(object? input)
+        => JsonConvert.SerializeObject(input, _jsonSerializerSettings);
+
+    public sealed override T? Deserialize<T>(string input)
+        where T : default
+        => JsonConvert.DeserializeObject<T>(input, _jsonSerializerSettings);
+
+    private sealed class ConfigurationCustomContractResolver : DefaultContractResolver
     {
         protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
         {
