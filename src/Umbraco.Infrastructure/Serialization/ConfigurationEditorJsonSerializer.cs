@@ -1,20 +1,32 @@
 using System.Reflection;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 using Umbraco.Cms.Core.PropertyEditors;
 using Umbraco.Cms.Core.Serialization;
 
 namespace Umbraco.Cms.Infrastructure.Serialization;
 
-public class ConfigurationEditorJsonSerializer : JsonNetSerializer, IConfigurationEditorJsonSerializer
+public class ConfigurationEditorJsonSerializer : JsonNetSerializer, IJsonSerializer, IConfigurationEditorJsonSerializer
 {
-    public ConfigurationEditorJsonSerializer()
+    private static readonly JsonSerializerSettings _jsonSerializerSettings = new()
     {
-        JsonSerializerSettings.Converters.Add(new FuzzyBooleanConverter());
-        JsonSerializerSettings.ContractResolver = new ConfigurationCustomContractResolver();
-        JsonSerializerSettings.Formatting = Formatting.None;
-        JsonSerializerSettings.NullValueHandling = NullValueHandling.Ignore;
-    }
+        Converters = new List<JsonConverter>
+        {
+            new StringEnumConverter(),
+            new FuzzyBooleanConverter()
+        },
+        ContractResolver = new ConfigurationCustomContractResolver(),
+        Formatting = Formatting.None,
+        NullValueHandling = NullValueHandling.Ignore,
+    };
+
+    string IJsonSerializer.Serialize(object? input)
+        => JsonConvert.SerializeObject(input, _jsonSerializerSettings);
+
+    T? IJsonSerializer.Deserialize<T>(string input)
+        where T : default
+        => JsonConvert.DeserializeObject<T>(input, _jsonSerializerSettings);
 
     private class ConfigurationCustomContractResolver : DefaultContractResolver
     {
